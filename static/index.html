@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>DevAgent</title>
+    <link rel="manifest" href="/static/manifest.json" />
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --panel-2: #1f2937;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #020817, #0f172a);
+        color: var(--text);
+      }
+
+      .app {
+        max-width: 900px;
+        margin: 0 auto;
+        min-height: 100vh;
+        padding: 24px 16px 80px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.8rem);
+      }
+
+      .badge {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.15);
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .chat {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      }
+
+      .messages {
+        min-height: 300px;
+        max-height: 55vh;
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .msg {
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        max-width: 85%;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      .user {
+        margin-left: auto;
+        background: #0ea5e9;
+        color: white;
+      }
+
+      .agent {
+        background: #1f2937;
+        color: var(--text);
+      }
+
+      .composer {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      textarea {
+        flex: 1;
+        min-height: 52px;
+        max-height: 150px;
+        resize: vertical;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: var(--panel-2);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      button {
+        border: none;
+        border-radius: 12px;
+        background: var(--accent);
+        color: #06243b;
+        font-weight: 700;
+        padding: 0 18px;
+        cursor: pointer;
+      }
+
+      @media (max-width: 600px) {
+        .header {
+          align-items: flex-start;
+          gap: 12px;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="header">
+        <h1>DevAgent</h1>
+        <div class="badge">AI Builder</div>
+      </div>
+
+      <div class="chat">
+        <div class="messages" id="messages">
+          <div class="msg agent">Привет! Я могу создавать сайты, приложения и простые игры. Скажи, что хочешь сделать.</div>
+        </div>
+        <div class="composer">
+          <textarea id="prompt" placeholder="Например: создай сайт портфолио или игру на Canvas..."></textarea>
+          <button id="send">Отправить</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const messages = document.getElementById('messages');
+      const prompt = document.getElementById('prompt');
+      const sendButton = document.getElementById('send');
+
+      function addMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.textContent = text;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const text = prompt.value.trim();
+        if (!text) return;
+
+        addMessage(text, 'user');
+        prompt.value = '';
+
+        try {
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+          });
+
+          const data = await response.json();
+          addMessage(data.answer, 'agent');
+        } catch (error) {
+          addMessage('Ошибка: ' + error.message, 'agent');
+        }
+      }
+
+      sendButton.addEventListener('click', sendMessage);
+      prompt.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

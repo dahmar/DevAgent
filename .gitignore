@@ -1,4 +1,12 @@
 .env
+.env.*
+
 .venv/
 __pycache__/
+*.pyc
+
 workspace/
+
+result.txt
+treetxt
+sttus.txt
