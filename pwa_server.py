@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponce
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -14,11 +14,11 @@ STATIC_DIR = BASE_DIR / "static"
 
 class ChatRequest(BaseModel):
     message: str
+    
 
-
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def index():
-    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.post("/api/chat")

@@ -1,2 +1,4 @@
 smolagents
 python-dotenv
+fastapi
+uvicorn
