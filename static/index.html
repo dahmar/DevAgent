@@ -89,6 +89,12 @@
         color: var(--text);
       }
 
+      .system {
+        background: rgba(251, 191, 36, 0.12);
+        border-left: 3px solid #fbbf24;
+        color: #fef3c7;
+      }
+
       .composer {
         display: flex;
         gap: 12px;
@@ -175,9 +181,10 @@
           });
 
           const data = await response.json();
-          addMessage(data.answer, 'agent');
+          const messageType = data.system || data.status === 'error' ? 'system' : 'agent';
+          addMessage(data.answer, messageType);
         } catch (error) {
-          addMessage('Ошибка: ' + error.message, 'agent');
+          addMessage('Ошибка: ' + error.message, 'system');
         }
       }
 

@@ -20,7 +20,10 @@ def test_chat_endpoint_returns_agent_response(monkeypatch):
     response = client.post("/api/chat", json={"message": "hello"})
 
     assert response.status_code == 200
-    assert response.json()["answer"] == "echo: hello"
+    payload = response.json()
+    assert payload["answer"] == "echo: hello"
+    assert payload["status"] == "ok"
+    assert payload["system"] is False
 
 
 def test_chat_endpoint_handles_model_failure(monkeypatch):
@@ -32,4 +35,7 @@ def test_chat_endpoint_handles_model_failure(monkeypatch):
     response = client.post("/api/chat", json={"message": "сделай змейку"})
 
     assert response.status_code == 200
-    assert "не удалось" in response.json()["answer"].lower()
+    payload = response.json()
+    assert payload["status"] == "error"
+    assert payload["system"] is True
+    assert "не удалось" in payload["answer"].lower()
