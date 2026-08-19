@@ -198,6 +198,7 @@
         addMessage(text, 'user');
         prompt.value = '';
         sendButton.disabled = true;
+        addProgress('Подключаюсь к журналу выполнения...');
 
         try {
           const response = await fetch('/api/chat/stream', {

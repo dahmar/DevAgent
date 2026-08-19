@@ -84,6 +84,8 @@ def chat(request: ChatRequest):
 
 
 def _event_stream(message: str) -> Iterator[str]:
+    # Push an initial chunk through reverse proxies that buffer small SSE writes.
+    yield ": connected" + (" " * 2048) + "\n\n"
     try:
         for event in ask_agent_stream(message):
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
@@ -96,7 +98,12 @@ def chat_stream(request: ChatRequest):
     return StreamingResponse(
         _event_stream(request.message),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "Content-Encoding": "identity",
+        },
     )
 
 
