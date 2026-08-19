@@ -14,6 +14,16 @@ def test_index_served():
     assert "DevAgent" in response.text
 
 
+def test_projects_endpoint_lists_workspace_directories():
+    response = client.get("/api/projects")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload["projects"], list)
+    assert any(project["name"] == "projects" for project in payload["projects"])
+    assert all({"name", "type", "files"} <= project.keys() for project in payload["projects"])
+
+
 def test_chat_endpoint_returns_agent_response(monkeypatch):
     monkeypatch.setattr(server, "ask_agent", lambda message: f"echo: {message}")
 

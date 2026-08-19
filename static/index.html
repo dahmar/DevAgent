@@ -39,6 +39,26 @@
         margin-bottom: 20px;
       }
 
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .tab {
+        min-height: 40px;
+        padding: 0 16px;
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .tab.active {
+        background: var(--accent);
+        color: #06243b;
+        border-color: var(--accent);
+      }
+
       h1 {
         margin: 0;
         font-size: clamp(1.8rem, 4vw, 2.8rem);
@@ -111,6 +131,52 @@
         background: rgba(15, 23, 42, 0.9);
       }
 
+      .projects-panel {
+        display: none;
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      }
+
+      .projects-panel.visible { display: block; }
+
+      .projects-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .projects-heading h2 { margin: 0; font-size: 1.2rem; }
+
+      .refresh {
+        min-height: 36px;
+        padding: 0 12px;
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .project-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+      }
+
+      .project-card {
+        padding: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 12px;
+        background: rgba(31, 41, 55, 0.75);
+      }
+
+      .project-card h3 { margin: 0 0 8px; font-size: 1rem; }
+      .project-card p { margin: 0; color: var(--muted); font-size: 13px; }
+      .empty { color: var(--muted); margin: 0; }
+
       textarea {
         flex: 1;
         min-height: 52px;
@@ -150,7 +216,12 @@
         <div class="badge">AI Builder</div>
       </div>
 
-      <div class="chat">
+      <div class="tabs" role="tablist" aria-label="Разделы">
+        <button class="tab active" id="chat-tab" role="tab" aria-selected="true">Чат</button>
+        <button class="tab" id="projects-tab" role="tab" aria-selected="false">Проекты</button>
+      </div>
+
+      <div class="chat" id="chat-panel">
         <div class="messages" id="messages">
           <div class="msg agent">Привет! Я могу создавать сайты, приложения и простые игры. Скажи, что хочешь сделать.</div>
         </div>
@@ -159,12 +230,66 @@
           <button id="send">Отправить</button>
         </div>
       </div>
+
+      <section class="projects-panel" id="projects-panel" aria-labelledby="projects-tab">
+        <div class="projects-heading">
+          <h2>Проекты в workspace</h2>
+          <button class="refresh" id="refresh-projects" title="Обновить список">Обновить</button>
+        </div>
+        <div class="project-list" id="project-list" aria-live="polite">
+          <p class="empty">Загрузка проектов...</p>
+        </div>
+      </section>
     </div>
 
     <script>
       const messages = document.getElementById('messages');
       const prompt = document.getElementById('prompt');
       const sendButton = document.getElementById('send');
+      const chatTab = document.getElementById('chat-tab');
+      const projectsTab = document.getElementById('projects-tab');
+      const chatPanel = document.getElementById('chat-panel');
+      const projectsPanel = document.getElementById('projects-panel');
+      const projectList = document.getElementById('project-list');
+      const refreshProjects = document.getElementById('refresh-projects');
+
+      function showTab(tab) {
+        const showProjects = tab === 'projects';
+        chatPanel.style.display = showProjects ? 'none' : '';
+        projectsPanel.classList.toggle('visible', showProjects);
+        chatTab.classList.toggle('active', !showProjects);
+        projectsTab.classList.toggle('active', showProjects);
+        chatTab.setAttribute('aria-selected', String(!showProjects));
+        projectsTab.setAttribute('aria-selected', String(showProjects));
+        if (showProjects) loadProjects();
+      }
+
+      async function loadProjects() {
+        projectList.innerHTML = '<p class="empty">Загрузка проектов...</p>';
+        try {
+          const response = await fetch('/api/projects');
+          if (!response.ok) throw new Error('Не удалось загрузить проекты');
+          const { projects } = await response.json();
+          if (!projects.length) {
+            projectList.innerHTML = '<p class="empty">Проектов пока нет.</p>';
+            return;
+          }
+          projectList.innerHTML = projects.map((project) => `
+            <article class="project-card">
+              <h3>${escapeHtml(project.name)}</h3>
+              <p>${escapeHtml(project.type)} · файлов: ${project.files}</p>
+            </article>
+          `).join('');
+        } catch (error) {
+          projectList.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, (character) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+      }
 
       function addMessage(text, type) {
         const div = document.createElement('div');
@@ -241,6 +366,9 @@
       }
 
       sendButton.addEventListener('click', sendMessage);
+      chatTab.addEventListener('click', () => showTab('chat'));
+      projectsTab.addEventListener('click', () => showTab('projects'));
+      refreshProjects.addEventListener('click', loadProjects);
       prompt.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();

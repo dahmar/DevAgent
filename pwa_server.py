@@ -13,6 +13,7 @@ from agent import ask_agent, ask_agent_stream
 app = FastAPI(title="DevAgent PWA")
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+WORKSPACE_DIR = BASE_DIR / "workspace"
 
 
 class ChatRequest(BaseModel):
@@ -61,6 +62,34 @@ def _build_system_message(exc: Exception) -> str:
 @app.get("/")
 def index():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/api/projects")
+def projects():
+    if not WORKSPACE_DIR.exists():
+        return {"projects": []}
+
+    items = []
+    for project_dir in sorted(WORKSPACE_DIR.iterdir(), key=lambda item: item.name.lower()):
+        if not project_dir.is_dir() or project_dir.name.startswith("."):
+            continue
+
+        files = [path for path in project_dir.rglob("*") if path.is_file()]
+        file_names = {path.name.lower() for path in files}
+        if "index.html" in file_names:
+            project_type = "Сайт"
+        elif any(name.endswith(".py") for name in file_names):
+            project_type = "Python-проект"
+        else:
+            project_type = "Проект"
+
+        items.append({
+            "name": project_dir.name,
+            "type": project_type,
+            "files": len(files),
+        })
+
+    return {"projects": items}
 
 
 @app.post("/api/chat")
