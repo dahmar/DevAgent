@@ -39,3 +39,18 @@ def test_chat_endpoint_handles_model_failure(monkeypatch):
     assert payload["status"] == "error"
     assert payload["system"] is True
     assert "не удалось" in payload["answer"].lower()
+
+
+def test_chat_stream_returns_progress_events(monkeypatch):
+    monkeypatch.setattr(server, "ask_agent_stream", lambda message: iter([
+        {"type": "status", "text": "Анализирую задачу..."},
+        {"type": "action", "text": "Выполняю: create_file"},
+        {"type": "answer", "text": "Готово"},
+    ]))
+
+    response = client.post("/api/chat/stream", json={"message": "создай файл"})
+
+    assert response.status_code == 200
+    assert '"type": "status"' in response.text
+    assert '"type": "action"' in response.text
+    assert '"text": "Готово"' in response.text

@@ -1,12 +1,14 @@
 import os
+import json
 from pathlib import Path
+from collections.abc import Iterator
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from agent import ask_agent
+from agent import ask_agent, ask_agent_stream
 
 app = FastAPI(title="DevAgent PWA")
 BASE_DIR = Path(__file__).resolve().parent
@@ -79,6 +81,23 @@ def chat(request: ChatRequest):
             "system": True,
             "details": str(exc),
         })
+
+
+def _event_stream(message: str) -> Iterator[str]:
+    try:
+        for event in ask_agent_stream(message):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+    except Exception as exc:
+        yield f"data: {json.dumps({'type': 'error', 'text': _build_system_message(exc)}, ensure_ascii=False)}\n\n"
+
+
+@app.post("/api/chat/stream")
+def chat_stream(request: ChatRequest):
+    return StreamingResponse(
+        _event_stream(request.message),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 if not STATIC_DIR.exists():
